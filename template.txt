@@ -1,9 +1,4 @@
-<link rev=made href="mailto:[% webMaster %]">
-[% ... %]
-<title>[% title %]</title>
-[% ... %]
-<p class="update">Last Update:[% lastupdate %]</p>
-[% FOREACH item %]
+[% FOREACH items %]
 <a name="[% id %]"></a>
 <h2>[% title %]</h2>
 <img src="./[% image %]"[% ... %]>
