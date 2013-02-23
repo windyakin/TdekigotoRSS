@@ -21,12 +21,12 @@ sub main()
 {
 	# RSS生成対象の取得
 	my $proxy = LWP::UserAgent->new;
-	$proxy->timeout(10);
+	$proxy->timeout(5);
 	$proxy->agent('Mozilla/5.0 (compatible; TdekigotoRSS/1.0; +https://github.com/windyakin/TdekigotoRSS)');
 	my $req = HTTP::Request->new(GET => 'http://www.tsuyama-ct.ac.jp/dekigoto.htm');
 	my $res = $proxy->request($req);
 	
-	# テンプレートの読み込み
+	# 解析用テンプレートの読み込み
 	open(TEMPLATE, "<", "./template.txt") || die('cannont open file.');
 	my $template = join('', <TEMPLATE>);
 	close(TEMPLATE);
@@ -36,8 +36,10 @@ sub main()
 	my $ext = $obj->extract($template, decode('Shift_JIS', $res->content));
 	
 	my $rss = new XML::RSS (version => '2.0');
+	# 今まで作成したRSSの読み込み
 	$rss->parsefile("dekigoto.rdf");
 	
+	# 基本情報
 	$rss->channel(
 		'title'			=> '津山高専 最近のできごと',
 		'link'			=> 'http://www.tsuyama-ct.ac.jp/',
@@ -50,6 +52,7 @@ sub main()
 	# 最後に取得したアイテムのURL
 	my $last = $rss->{'items'}[0]->{'link'};
 	
+	# 差分取得用配列
 	my @diff = ();
 	
 	# 取得したアイテムから差分を取り出す
@@ -58,24 +61,22 @@ sub main()
 		# アイテムのURL
 		my $url = 'http://www.tsuyama-ct.ac.jp/dekigoto.htm#'.$item->{'id'};
 		
-		# 既に登録されている記事があるようだったら終わり
-		if ( $last eq $url ) {
-			last;
-		}
+		# 既に登録されている記事があるようだったら差分取り出し終了
+		last if ( $last eq $url );
 		
 		# 差分配列に追加
 		unshift(@diff, $item);
 	}
 	
-	# いよいよ追加します
+	# 差分をアイテムに追加する
 	foreach my $item (@diff)
 	{
-		# 10件以上の登録があるようならアイテムを削除
+		# 既に10件以上の登録があるようならアイテムを削除
 		if (@{$rss->{'items'}} == 10) {
 			pop(@{$rss->{'items'}}) 
 		}
 		
-		# 本文の調理
+		# 本文の処理
 		$item->{'description'} =~ s/<img[^>]*>\r?\n//gi;
 		$item->{'description'} =~ s/<br clear="all">\r?\n/<br>\n/gi;
 		$item->{'description'} =~ s/　(.+)\r?\n/$1\n/gi;
@@ -95,6 +96,7 @@ sub main()
 				'length'		=> $res->header("Content-Length"),
 				'type'			=> $res->header("Content-Type"),
 			},
+			# 画像の最終更新日時≒記事の公開日時
 			'pubDate'		=> $res->header("Last-Modified"),
 			'mode'			=> 'insert',
 		);
@@ -104,7 +106,7 @@ sub main()
 	print $rss->as_string();
 	#$rss->save("dekigoto.rdf");
 	
-#	print "OK!\n";
+	#print "OK!\n";
 	
 	return 0;
 }
