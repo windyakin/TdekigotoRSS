@@ -14,13 +14,13 @@ use lib './lib';
 use Template::Extract;
 use LWP::UserAgent;
 use Encode;
-#use XML::RSS;
 use XML::FeedPP;
 
 exit(main());
 
 sub main
 {
+	# 出力ファイル名
 	my $rdfname = "dekigoto.rdf";
 	
 	# RSS生成対象の取得
@@ -29,6 +29,9 @@ sub main
 	$proxy->agent('Mozilla/5.0 (compatible; TdekigotoRSS/1.0; +https://github.com/windyakin/TdekigotoRSS)');
 	my $req = HTTP::Request->new(GET => 'http://www.tsuyama-ct.ac.jp/dekigoto.htm');
 	my $res = $proxy->request($req);
+	
+	# 正しく取得できていないようであればdie
+	die $res->status_line if ( !$res->is_success );
 	
 	# 解析用テンプレートの読み込み
 	open(TEMPLATE, "<", "./template.txt") || die('cannont open file.');
@@ -49,6 +52,7 @@ sub main
 		'webMaster'		=> 'webmaster@tsuyama-ct.ac.jp',
 		'pubDate'		=> $res->{"Last-Modified"},
 	);
+	
 	
 	# 今まで作成したRSSがあれば読み込み
 	if ( -e "./$rdfname" ) {
@@ -85,12 +89,17 @@ sub main
 		my $image = 'http://www.tsuyama-ct.ac.jp/'.$item->{'image'};
 		$req = HTTP::Request->new(HEAD => $image);
 		$res = $proxy->request($req);
+		# 正しく取得できていないようであればdie
+		die $res->status_line if ( !$res->is_success );
+		
+		# 本文の内容に画像のリンクタグを追加
+		$item->{'description'} = '<a href="'.$url.'" target="_blank"><img src="'.$image.'"></a><br>'."\n".$item->{'description'};
 		
 		# アイテムをRSSに追加
 		$rss->add_item(
 			'title'			=> $item->{'title'},
-			'link'			=> 'http://www.tsuyama-ct.ac.jp/dekigoto.htm#'.$item->{'id'},
-			'description'	=> $item->{'description'},
+			'link'			=> $url,
+			'description'	=> \$item->{'description'},
 			'enclosure'		=> {
 				'url'			=> $image,
 				'length'		=> $res->header("Content-Length"),
