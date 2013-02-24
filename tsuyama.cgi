@@ -5,20 +5,24 @@ use strict;
 use warnings;
 use utf8;
 
+# debug
+use Data::Dumper;
+use CGI::Carp qw(fatalsToBrowser);
+
 # lib
 use lib './lib';
 use Template::Extract;
 use LWP::UserAgent;
 use Encode;
-use XML::RSS;
-
-# debug
-use Data::Dumper;
+#use XML::RSS;
+use XML::FeedPP;
 
 exit(main());
 
-sub main()
+sub main
 {
+	my $rdfname = "dekigoto.rdf";
+	
 	# RSS生成対象の取得
 	my $proxy = LWP::UserAgent->new;
 	$proxy->timeout(5);
@@ -35,45 +39,41 @@ sub main()
 	my $obj = Template::Extract->new;
 	my $ext = $obj->extract($template, decode('Shift_JIS', $res->content));
 	
-	my $rss = new XML::RSS (version => '2.0');
-	# 今まで作成したRSSの読み込み
-	$rss->parsefile("dekigoto.rdf");
-	
-	# 基本情報
-	$rss->channel(
+	# インスタンスを作成
+	my $rss = XML::FeedPP::RSS->new(
 		'title'			=> '津山高専 最近のできごと',
 		'link'			=> 'http://www.tsuyama-ct.ac.jp/',
 		'language'		=> 'ja',
 		'description'	=> '津山工業高等専門学校の最近のできごとの非公式RSSフィードです',
 		'copyright'		=> 'Copyright (C) 1997-2013, Tsuyama National College of Technology',
 		'webMaster'		=> 'webmaster@tsuyama-ct.ac.jp',
+		'pubDate'		=> $res->{"Last-Modified"},
 	);
 	
-	# 最後に取得したアイテムのURL
-	my $last = $rss->{'items'}[0]->{'link'};
+	# 今まで作成したRSSがあれば読み込み
+	if ( -e "./$rdfname" ) {
+		# XML::FeedPPはファイルをmergeできますがエンコード処理があやしいので一度変数に入れてから読み込みませます
+		open(RSS, "<", "./$rdfname") || die('cannot open file');
+		my $xml = join('', <RSS>);
+		close(RSS);
+		$rss->merge(decode('UTF-8', $xml));
+	}
+	print "Content-type: text/plain;\n\n";
 	
-	# 差分取得用配列
-	my @diff = ();
-	
-	# 取得したアイテムから差分を取り出す
+	# 取得したアイテムを追加
 	foreach my $item (@{$ext->{'items'}})
 	{
 		# アイテムのURL
 		my $url = 'http://www.tsuyama-ct.ac.jp/dekigoto.htm#'.$item->{'id'};
 		
-		# 既に登録されている記事があるようだったら差分取り出し終了
-		last if ( $last eq $url );
-		
-		# 差分配列に追加
-		unshift(@diff, $item);
-	}
-	
-	# 差分をアイテムに追加する
-	foreach my $item (@diff)
-	{
-		# 既に10件以上の登録があるようならアイテムを削除
-		if (@{$rss->{'items'}} == 10) {
-			pop(@{$rss->{'items'}}) 
+		# アイテムが既に取得済みであればスキップ
+		# 画像取得処理の軽減
+		if ( $rss->match_item('link' => qr(^$url$)) ) {
+			print "skip:$url\n";
+			next;
+		}
+		else {
+			print "add :$url\n";
 		}
 		
 		# 本文の処理
@@ -98,15 +98,20 @@ sub main()
 			},
 			# 画像の最終更新日時≒記事の公開日時
 			'pubDate'		=> $res->header("Last-Modified"),
-			'mode'			=> 'insert',
 		);
 	}
 	
-	print "Content-type: text/plain;\n\n";
-	print $rss->as_string();
-	#$rss->save("dekigoto.rdf");
+	# 重複判定・ソート
+	$rss->normalize();
+	# アイテム数の制限
+	$rss->limit_item(15);
 	
-	#print "OK!\n";
+	if ( $rss->to_file($rdfname, "UTF-8") ) {
+		print "finish\n";
+	}
+	else {
+		print "error!\n";
+	}
 	
 	return 0;
 }
