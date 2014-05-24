@@ -6,8 +6,8 @@ use warnings;
 use utf8;
 
 # debug
-use Data::Dumper;
-use CGI::Carp qw(fatalsToBrowser);
+#use Data::Dumper;
+#use CGI::Carp qw(fatalsToBrowser);
 
 # lib
 use lib './lib';
