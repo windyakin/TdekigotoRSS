@@ -50,7 +50,7 @@ sub main
 		'link'			=> 'http://www.tsuyama-ct.ac.jp/',
 		'language'		=> 'ja',
 		'description'	=> '津山工業高等専門学校の最近のできごとの非公式RSSフィードです',
-		'copyright'		=> 'Copyright (C) 1997-2013, Tsuyama National College of Technology',
+		'copyright'		=> 'Copyright (C) 1997-2015, Tsuyama National College of Technology',
 		'webMaster'		=> 'webmaster@tsuyama-ct.ac.jp',
 		'pubDate'		=> $res->{"Last-Modified"},
 	);
