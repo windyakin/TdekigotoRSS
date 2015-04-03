@@ -10,7 +10,9 @@ use utf8;
 #use CGI::Carp qw(fatalsToBrowser);
 
 # lib
-use lib './lib';
+use lib './perllib/lib/perl5';
+use local::lib './perllib';
+no lib './perllib/lib/perl5';
 use Template::Extract;
 use LWP::UserAgent;
 use Encode;
