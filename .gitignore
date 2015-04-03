@@ -1,0 +1,6 @@
+perllib/*
+!perllib/.htaccess
+
+dekigoto.rdf
+
+dekigoto_lastupdate.txt
