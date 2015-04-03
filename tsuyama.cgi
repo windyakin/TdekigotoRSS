@@ -116,6 +116,9 @@ sub main
 	$rss->limit_item(15);
 	
 	if ( $rss->to_file($rdfname, "UTF-8") ) {
+		if ( open("LAST", ">", "./dekigoto_lastupdate.txt") ) {
+			print LAST time;
+		}
 		print "finish\n";
 	}
 	else {
