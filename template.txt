@@ -1,5 +1,5 @@
 [% FOREACH items %]
-<h2><a name="[% id %]">[% title %]</a></h2>
+<div class="category"><h2><a name="[% id %]">[% title %]</a></h2></div>
 <img src="./[% image %]"[% ... %]>
 [% description %]
 <br clear="all">
